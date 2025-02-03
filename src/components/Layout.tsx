@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ReactNode } from 'react'
 
 interface LayoutProps {
@@ -6,8 +7,8 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {children}
     </div>
   )
-} 
+}
