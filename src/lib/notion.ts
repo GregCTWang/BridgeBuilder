@@ -25,17 +25,23 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
+    // 首先檢查資料庫結構
+    const database = await notion.databases.retrieve({
+      database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+    });
+    console.log('Database properties:', database.properties);
+
     const response = await notion.pages.create({
       parent: { 
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        // Name 作為 Content
-        Name: {
+        // 使用資料庫中實際的欄位名稱
+        Content: {  // 或其他實際的名稱
           title: [
             {
               text: {
-                content: entry.content // 使用 content 而不是 title
+                content: entry.content
               }
             }
           ]

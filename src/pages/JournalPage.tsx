@@ -79,6 +79,21 @@ const JournalPage = () => {
     validateConnection();
   }, []);
 
+  useEffect(() => {
+    const checkDatabase = async () => {
+      try {
+        const database = await notion.databases.retrieve({
+          database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+        });
+        console.log('Database properties:', database.properties);
+      } catch (error) {
+        console.error('Error checking database:', error);
+      }
+    };
+
+    checkDatabase();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
