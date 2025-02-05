@@ -5,7 +5,7 @@ import { cn } from "../lib/utils"
 import { format } from "date-fns"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import axios from 'axios'
+import { syncToNotion, JournalEntry } from "../lib/notion"
 
 const JournalPage = () => {
   const [entry, setEntry] = useState("")
@@ -59,8 +59,14 @@ const JournalPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
+      const newEntry: JournalEntry = {
+        title: format(new Date(), "yyyy-MM-dd"),
+        content: entry,
+        date: new Date().toISOString(),
+      }
+
       // Save to Notion
-      await saveEntryToNotion(new Date(), entry)
+      await syncToNotion(newEntry)
       
       // Update local state
       setEntries([{ date: new Date(), content: entry }, ...entries])
@@ -72,46 +78,6 @@ const JournalPage = () => {
       })
     }
   }
-
-  const saveEntryToNotion = async (date: Date, content: string) => {
-    const notionToken = import.meta.env.VITE_NOTION_TOKEN;
-    const databaseId = import.meta.env.VITE_NOTION_DATABASE_ID;
-
-    const url = `https://api.notion.com/v1/pages`;
-
-    const data = {
-      parent: { database_id: databaseId },
-      properties: {
-        Date: {
-          date: {
-            start: date.toISOString(),
-          },
-        },
-        Content: {
-          rich_text: [
-            {
-              text: {
-                content: content,
-              },
-            },
-          ],
-        },
-      },
-    };
-
-    try {
-      const response = await axios.post(url, data, {
-        headers: {
-          Authorization: `Bearer ${notionToken}`,
-          "Content-Type": "application/json",
-          "Notion-Version": "2022-06-28",
-        },
-      });
-      console.log("Entry saved to Notion:", response.data);
-    } catch (error) {
-      console.error("Error saving entry to Notion:", error);
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto p-4 min-h-screen bg-background">

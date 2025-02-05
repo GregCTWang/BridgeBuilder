@@ -1,13 +1,21 @@
 import { Client } from '@notionhq/client';
 
-const notion = new Client({
-  auth: process.env.VITE_NOTION_API_KEY,
+// 使用 VITE_ 前綴，因為您的專案使用的是 Vite
+export const notion = new Client({
+  auth: import.meta.env.VITE_NOTION_TOKEN
 });
+
+// 更新 JournalEntry 介面
+export interface JournalEntry {
+  title: string;
+  content: string;
+  date: string;
+}
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
     await notion.pages.create({
-      parent: { database_id: process.env.VITE_NOTION_DATABASE_ID },
+      parent: { database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string },
       properties: {
         Title: {
           title: [{ text: { content: entry.title } }]
