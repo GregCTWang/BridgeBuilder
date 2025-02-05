@@ -26,13 +26,13 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    await notion.pages.create({
+    const response = await notion.pages.create({
       parent: { 
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        // 確保這些屬性名稱與您的 Notion 資料庫中的完全相符
-        Name: {
+        // 使用 Title 而不是 Name（如果您的資料庫使用 Title）
+        Title: {
           title: [
             {
               text: {
@@ -57,10 +57,11 @@ export const syncToNotion = async (entry: JournalEntry) => {
         }
       }
     });
-    console.log('Successfully synced to Notion');
-  } catch (error) {
-    console.error('Failed to sync with Notion:', error);
-    // 拋出錯誤以便上層處理
+    
+    console.log('Successfully synced to Notion, response:', response);
+    return response;
+  } catch (error: any) {
+    console.error('Failed to sync with Notion:', error?.body || error);
     throw error;
   }
 };

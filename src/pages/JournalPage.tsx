@@ -5,7 +5,7 @@ import { cn } from "../lib/utils"
 import { format } from "date-fns"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { syncToNotion, JournalEntry } from "../lib/notion"
+import { syncToNotion, JournalEntry, validateDatabaseConnection } from "../lib/notion"
 
 const JournalPage = () => {
   const [entry, setEntry] = useState("")
@@ -56,6 +56,24 @@ const JournalPage = () => {
     console.log('Database ID:', import.meta.env.VITE_NOTION_DATABASE_ID ? '已設置' : '未設置');
   }, []);
 
+  useEffect(() => {
+    // 驗證資料庫連接
+    const validateConnection = async () => {
+      try {
+        const isValid = await validateDatabaseConnection();
+        if (isValid) {
+          console.log('Successfully connected to Notion database');
+        } else {
+          console.error('Failed to connect to Notion database');
+        }
+      } catch (error) {
+        console.error('Error validating database connection:', error);
+      }
+    };
+
+    validateConnection();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
@@ -67,7 +85,8 @@ const JournalPage = () => {
         }
 
         // Save to Notion
-        await syncToNotion(newEntry)
+        const response = await syncToNotion(newEntry)
+        console.log('Notion response:', response);
         
         // Update local state
         setEntries([{ date: new Date(), content: entry }, ...entries])
@@ -77,11 +96,11 @@ const JournalPage = () => {
           description: `儲存時間：${format(new Date(), "yyyy年MM月dd日 HH:mm")}`,
           duration: 3000,
         })
-      } catch (error) {
-        console.error('Error saving to Notion:', error);
+      } catch (error: any) {
+        console.error('Error saving to Notion:', error?.body || error);
         toast({
           title: "儲存失敗",
-          description: "無法同步到 Notion，請檢查連線設定",
+          description: `無法同步到 Notion：${error?.body?.message || error?.message || '請檢查連線設定'}`,
           variant: "destructive",
           duration: 5000,
         })
