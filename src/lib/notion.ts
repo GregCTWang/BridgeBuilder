@@ -19,9 +19,8 @@ export const notion = new Client({
 
 // 更新 JournalEntry 介面
 export interface JournalEntry {
-  title: string;
-  content: string;
-  date: string;
+  content: string;  // 用於 Name 欄位
+  date: string;     // 用於 Date 欄位
 }
 
 export const syncToNotion = async (entry: JournalEntry) => {
@@ -31,21 +30,12 @@ export const syncToNotion = async (entry: JournalEntry) => {
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        // 使用 Title 而不是 Name（如果您的資料庫使用 Title）
-        Title: {
+        // Name 作為 Content
+        Name: {
           title: [
             {
               text: {
-                content: entry.title
-              }
-            }
-          ]
-        },
-        Content: {
-          rich_text: [
-            {
-              text: {
-                content: entry.content
+                content: entry.content // 使用 content 而不是 title
               }
             }
           ]
@@ -61,6 +51,11 @@ export const syncToNotion = async (entry: JournalEntry) => {
     console.log('Successfully synced to Notion, response:', response);
     return response;
   } catch (error: any) {
+    // 改進錯誤處理，捕獲網路錯誤
+    if (error.code === 'ECONNREFUSED' || error.name === 'FetchError') {
+      console.error('Network error:', error);
+      throw new Error('Failed to connect to Notion API');
+    }
     console.error('Failed to sync with Notion:', error?.body || error);
     throw error;
   }

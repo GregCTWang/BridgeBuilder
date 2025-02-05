@@ -63,6 +63,11 @@ const JournalPage = () => {
         const isValid = await validateDatabaseConnection();
         if (isValid) {
           console.log('Successfully connected to Notion database');
+          // 檢查資料庫結構
+          const database = await notion.databases.retrieve({
+            database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+          });
+          console.log('Database properties:', database.properties);
         } else {
           console.error('Failed to connect to Notion database');
         }
@@ -79,7 +84,6 @@ const JournalPage = () => {
     if (entry.trim()) {
       try {
         const newEntry: JournalEntry = {
-          title: format(new Date(), "yyyy-MM-dd"),
           content: entry,
           date: new Date().toISOString(),
         }
@@ -97,10 +101,12 @@ const JournalPage = () => {
           duration: 3000,
         })
       } catch (error: any) {
-        console.error('Error saving to Notion:', error?.body || error);
+        console.error('Error saving to Notion:', error);
         toast({
           title: "儲存失敗",
-          description: `無法同步到 Notion：${error?.body?.message || error?.message || '請檢查連線設定'}`,
+          description: error.message === 'Failed to connect to Notion API' 
+            ? '無法連接到 Notion API，請檢查網路連線'
+            : `無法同步到 Notion：${error?.body?.message || error?.message || '請檢查連線設定'}`,
           variant: "destructive",
           duration: 5000,
         })
