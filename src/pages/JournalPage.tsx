@@ -5,7 +5,7 @@ import { cn } from "../lib/utils"
 import { format } from "date-fns"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { syncToNotion, JournalEntry, validateDatabaseConnection, notion } from "../lib/notion"
+import { syncToNotion, JournalEntry, validateDatabaseConnection, notion, verifyNotionAccess } from "../lib/notion"
 
 const JournalPage = () => {
   const [entry, setEntry] = useState("")
@@ -110,6 +110,26 @@ const JournalPage = () => {
     };
 
     checkEnvironment();
+  }, []);
+
+  useEffect(() => {
+    const verifyAccess = async () => {
+      try {
+        const hasAccess = await verifyNotionAccess();
+        if (!hasAccess) {
+          toast({
+            title: "Notion 連接失敗",
+            description: "請確保已將 integration 添加到資料庫的共享設定中",
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        console.error('Access verification failed:', error);
+      }
+    };
+
+    verifyAccess();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

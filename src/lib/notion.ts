@@ -24,28 +24,27 @@ export interface JournalEntry {
 }
 
 export const syncToNotion = async (entry: JournalEntry) => {
-  // 在同步之前檢查環境變數
-  if (!import.meta.env.VITE_NOTION_TOKEN) {
-    throw new Error('Notion Token is not set in environment variables');
-  }
-  if (!import.meta.env.VITE_NOTION_DATABASE_ID) {
-    throw new Error('Notion Database ID is not set in environment variables');
-  }
-
   try {
-    console.log('Sync attempt details:', {
-      tokenAvailable: !!import.meta.env.VITE_NOTION_TOKEN,
-      tokenPrefix: import.meta.env.VITE_NOTION_TOKEN?.substring(0, 5),
-      databaseId: import.meta.env.VITE_NOTION_DATABASE_ID,
-      entry
+    // 首先檢查資料庫結構
+    const database = await notion.databases.retrieve({
+      database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+    });
+    
+    // 輸出資料庫結構以進行調試
+    console.log('Database structure:', {
+      properties: database.properties,
+      parent: database.parent,
+      title: database.title
     });
 
+    // 根據資料庫結構建立頁面
     const response = await notion.pages.create({
       parent: { 
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        Content: {
+        // 使用資料庫中的主要屬性（通常是 title 類型）作為內容
+        [database.title[0]?.plain_text || 'Name']: {
           title: [
             {
               text: {
@@ -54,6 +53,7 @@ export const syncToNotion = async (entry: JournalEntry) => {
             }
           ]
         },
+        // 日期屬性
         Date: {
           date: {
             start: entry.date
@@ -71,11 +71,7 @@ export const syncToNotion = async (entry: JournalEntry) => {
       status: error.status,
       code: error.code,
       body: error.body,
-      stack: error.stack,
-      envVars: {
-        hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
-        hasDbId: !!import.meta.env.VITE_NOTION_DATABASE_ID
-      }
+      stack: error.stack
     });
     throw error;
   }
@@ -126,6 +122,33 @@ export async function validateDatabaseConnection() {
     return true;
   } catch (error) {
     console.error('Failed to connect to Notion database:', error);
+    return false;
+  }
+}
+
+export async function verifyNotionAccess() {
+  try {
+    // 檢查 token 是否有效
+    const user = await notion.users.me();
+    console.log('Notion user:', user);
+
+    // 檢查資料庫訪問權限
+    const database = await notion.databases.retrieve({
+      database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+    });
+    console.log('Database access verified:', {
+      id: database.id,
+      title: database.title,
+      properties: Object.keys(database.properties)
+    });
+
+    return true;
+  } catch (error: any) {
+    console.error('Notion access verification failed:', {
+      error,
+      message: error.message,
+      code: error.code
+    });
     return false;
   }
 } 
