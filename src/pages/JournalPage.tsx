@@ -136,19 +136,17 @@ const JournalPage = () => {
     e.preventDefault()
     if (entry.trim()) {
       try {
-        // 添加日誌來追踪提交過程
-        console.log('Submitting entry:', entry);
-        
         const newEntry: JournalEntry = {
           content: entry,
           date: new Date().toISOString(),
         }
 
-        console.log('Created newEntry object:', newEntry);
-
         // Save to Notion
         const response = await syncToNotion(newEntry)
-        console.log('Notion response:', response);
+        console.log('Entry saved:', {
+          url: response.url,
+          id: response.id
+        });
         
         // Update local state
         setEntries([{ date: new Date(), content: entry }, ...entries])
@@ -159,22 +157,20 @@ const JournalPage = () => {
           duration: 3000,
         })
       } catch (error: any) {
-        // 更詳細的錯誤處理
-        console.error('Error details:', {
-          error,
-          message: error.message,
-          body: error.body,
-          code: error.code
-        });
+        console.error('Save failed:', error);
+        
+        // 更具體的錯誤訊息
+        const errorMessage = error.message === 'Network connection failed. Please check your internet connection.'
+          ? '網路連接失敗，請檢查您的網路連接'
+          : error.code === 'unauthorized'
+          ? '授權失敗，請檢查 API Token'
+          : error.code === 'validation_error'
+          ? '資料驗證失敗'
+          : '無法同步到 Notion，請稍後再試';
 
         toast({
           title: "儲存失敗",
-          description: `無法同步到 Notion：${
-            error.code === 'unauthorized' ? '授權失敗，請檢查 API Token' :
-            error.code === 'validation_error' ? '資料驗證失敗' :
-            error.message === 'Failed to connect to Notion API' ? '無法連接到 Notion API' :
-            error?.body?.message || error?.message || '請檢查連線設定'
-          }`,
+          description: errorMessage,
           variant: "destructive",
           duration: 5000,
         })

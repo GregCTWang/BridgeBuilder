@@ -16,7 +16,8 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
 // 使用 VITE_ 前綴，因為您的專案使用的是 Vite
 export const notion = new Client({
   auth: import.meta.env.VITE_NOTION_TOKEN,
-  notionVersion: '2022-06-28'
+  notionVersion: '2022-06-28',
+  fetch: fetch // 明確指定使用全局 fetch
 });
 
 // 更新 JournalEntry 介面
@@ -27,17 +28,22 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    // 簡化結構，參考官方範例
+    // 首先驗證連接
+    const isValid = await validateDatabaseConnection();
+    if (!isValid) {
+      throw new Error('Database connection failed');
+    }
+
+    // 使用與 curl 測試完全相同的結構
     const newPage = await notion.pages.create({
       parent: {
-        database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
+        database_id: import.meta.env.VITE_NOTION_DATABASE_ID
       },
       properties: {
-        // 確保屬性名稱完全匹配資料庫中的欄位名稱
         Content: {
           title: [
             {
-              type: "text",  // 添加 type 屬性
+              type: "text",
               text: {
                 content: entry.content
               }
@@ -45,28 +51,46 @@ export const syncToNotion = async (entry: JournalEntry) => {
           ]
         },
         Date: {
-          type: "date",  // 添加 type 屬性
+          type: "date",
           date: {
             start: entry.date,
-            time_zone: null  // 明確設置時區
+            time_zone: null
           }
         }
       }
     });
 
-    console.log('Page created:', newPage.url);  // 記錄新頁面的 URL
+    console.log('Page created:', {
+      url: newPage.url,
+      id: newPage.id,
+      properties: newPage.properties
+    });
     return newPage;
   } catch (error: any) {
-    console.error('Failed to create page:', {
-      error,
+    // 更詳細的錯誤處理
+    if (error.name === 'FetchError' || error.message === 'Failed to fetch') {
+      console.error('Network error:', {
+        error,
+        env: {
+          hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
+          hasDbId: !!import.meta.env.VITE_NOTION_DATABASE_ID,
+          isDev: import.meta.env.DEV,
+          isProd: import.meta.env.PROD
+        }
+      });
+      throw new Error('Network connection failed. Please check your internet connection.');
+    }
+
+    console.error('Notion API error:', {
+      name: error.name,
       message: error.message,
       code: error.code,
-      requestDetails: {
-        databaseId: import.meta.env.VITE_NOTION_DATABASE_ID,
-        properties: {
-          content: entry.content,
-          date: entry.date
-        }
+      status: error.status,
+      body: error.body,
+      request: {
+        databaseId: import.meta.env.VITE_NOTION_DATABASE_ID?.substring(0, 5) + '...',
+        content: entry.content.substring(0, 20) + '...',
+        date: entry.date
       }
     });
     throw error;
