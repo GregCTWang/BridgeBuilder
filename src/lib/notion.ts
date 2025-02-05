@@ -6,6 +6,7 @@ const requiredEnvVars = {
   DATABASE_ID: import.meta.env.VITE_NOTION_DATABASE_ID
 };
 
+// 修正參數名稱
 Object.entries(requiredEnvVars).forEach(([name, value]) => {
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -19,7 +20,7 @@ export const notion = new Client({
 
 // 更新 JournalEntry 介面
 export interface JournalEntry {
-  content: string;  // 用於 Name 欄位
+  content: string;  // 用於 Content 欄位
   date: string;     // 用於 Date 欄位
 }
 
@@ -43,8 +44,8 @@ export const syncToNotion = async (entry: JournalEntry) => {
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        // 使用資料庫中的主要屬性（通常是 title 類型）作為內容
-        [database.title[0]?.plain_text || 'Name']: {
+        // 使用 Content 作為主要屬性
+        Content: {
           title: [
             {
               text: {
@@ -53,7 +54,6 @@ export const syncToNotion = async (entry: JournalEntry) => {
             }
           ]
         },
-        // 日期屬性
         Date: {
           date: {
             start: entry.date
@@ -65,13 +65,20 @@ export const syncToNotion = async (entry: JournalEntry) => {
     console.log('Sync success:', response);
     return response;
   } catch (error: any) {
+    // 添加更詳細的錯誤日誌
+    console.error('Full error object:', error);
     console.error('Sync error details:', {
       error,
       message: error.message,
       status: error.status,
       code: error.code,
       body: error.body,
-      stack: error.stack
+      stack: error.stack,
+      requestDetails: {
+        databaseId: import.meta.env.VITE_NOTION_DATABASE_ID,
+        hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
+        entry
+      }
     });
     throw error;
   }
