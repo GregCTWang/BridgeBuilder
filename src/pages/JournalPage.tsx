@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Button } from "../components/ui/button"
 import { Textarea } from "../components/ui/textarea"
-import { Calendar } from "../components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover"
 import { cn } from "../lib/utils"
 import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { useToast } from "@/components/ui/use-toast"
+import axios from 'axios'
 
-export default function JournalPage() {
+const JournalPage = () => {
   const [entry, setEntry] = useState("")
-  const [date, setDate] = useState<Date>(new Date())
   const [entries, setEntries] = useState<Array<{ date: Date; content: string }>>([])
   const [isTyping, setIsTyping] = useState(false)
   const [isFaded, setIsFaded] = useState(false)
@@ -54,55 +50,72 @@ export default function JournalPage() {
     ])
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // 測試環境變量是否正確載入
+    console.log('Notion Token:', import.meta.env.VITE_NOTION_TOKEN ? '已設置' : '未設置');
+    console.log('Database ID:', import.meta.env.VITE_NOTION_DATABASE_ID ? '已設置' : '未設置');
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
-      setEntries([{ date, content: entry }, ...entries])
+      // Save to Notion
+      await saveEntryToNotion(new Date(), entry)
+      
+      // Update local state
+      setEntries([{ date: new Date(), content: entry }, ...entries])
       setEntry("")
       toast({
         title: "已儲存",
-        description: `儲存時間：${format(date, "yyyy年MM月dd日 HH:mm")}`,
+        description: `儲存時間：${format(new Date(), "yyyy年MM月dd日 HH:mm")}`,
         duration: 3000,
       })
     }
   }
 
-  const formatDate = (date: Date) => {
-    const isToday = new Date().toDateString() === date.toDateString()
-    return isToday ? "今天" : format(date, "yyyy年MM月dd日")
-  }
+  const saveEntryToNotion = async (date: Date, content: string) => {
+    const notionToken = import.meta.env.VITE_NOTION_TOKEN;
+    const databaseId = import.meta.env.VITE_NOTION_DATABASE_ID;
 
-  const testToast = () => {
-    toast({
-      title: "測試通知",
-      description: "這是一個測試通知，測試 Toast 組件。",
-      duration: 3000,
-    })
-  }
+    const url = `https://api.notion.com/v1/pages`;
+
+    const data = {
+      parent: { database_id: databaseId },
+      properties: {
+        Date: {
+          date: {
+            start: date.toISOString(),
+          },
+        },
+        Content: {
+          rich_text: [
+            {
+              text: {
+                content: content,
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    try {
+      const response = await axios.post(url, data, {
+        headers: {
+          Authorization: `Bearer ${notionToken}`,
+          "Content-Type": "application/json",
+          "Notion-Version": "2022-06-28",
+        },
+      });
+      console.log("Entry saved to Notion:", response.data);
+    } catch (error) {
+      console.error("Error saving entry to Notion:", error);
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className={cn("text-2xl font-bold", isFaded && "opacity-50 transition-opacity duration-500")}>
-          今天想寫些什麼？
-        </h1>
-        <Button onClick={testToast} variant="outline" size="sm">
-          測試通知
-        </Button>
-      </div>
-      <div className={cn("flex justify-end mb-2", isFaded && "opacity-50 transition-opacity duration-500")}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formatDate(date)}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar mode="single" selected={date} onSelect={(newDate) => newDate && setDate(newDate)} initialFocus />
-          </PopoverContent>
-        </Popover>
-      </div>
+    <div className="max-w-2xl mx-auto p-4 min-h-screen bg-background">
+      <h1 className="text-2xl font-bold mb-6">今天想寫些什麼？</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Textarea
           ref={textareaRef}
@@ -113,28 +126,34 @@ export default function JournalPage() {
           }}
           onBlur={() => setIsTyping(false)}
           placeholder="開始寫下你的想法..."
-          className="w-full min-h-[100px]"
+          className="w-full min-h-[100px] p-4 text-lg"
         />
-        <Button type="submit" className={cn(isFaded && "opacity-50 transition-opacity duration-500")}>
+        <Button 
+          type="submit" 
+          className={cn(
+            "w-full md:w-auto",
+            isFaded && "opacity-50 transition-opacity duration-500"
+          )}
+        >
           儲存
         </Button>
       </form>
-      <Separator className="my-4" />
-      <div className={cn("space-y-2", isFaded && "opacity-50 transition-opacity duration-500")}>
+      <Separator className="my-8" />
+      <div className={cn(
+        "space-y-4",
+        isFaded && "opacity-50 transition-opacity duration-500"
+      )}>
         {entries.map((entry, index) => (
-          <HoverCard key={index} openDelay={0} closeDelay={0}>
-            <HoverCardTrigger asChild>
-              <div className="cursor-pointer truncate">
-                {format(entry.date, "yyyy年MM月dd日")}: {entry.content}
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-80">
-              <p className="font-semibold">{format(entry.date, "yyyy年MM月dd日 HH:mm")}</p>
-              <p className="mt-2">{entry.content}</p>
-            </HoverCardContent>
-          </HoverCard>
+          <div key={index} className="p-4 border rounded-lg">
+            <div className="font-bold mb-2">
+              {format(entry.date, "yyyy年MM月dd日")}
+            </div>
+            <div>{entry.content}</div>
+          </div>
         ))}
       </div>
     </div>
   )
-} 
+}
+
+export default JournalPage 
