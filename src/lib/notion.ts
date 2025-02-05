@@ -16,8 +16,8 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
 // 使用 VITE_ 前綴，因為您的專案使用的是 Vite
 export const notion = new Client({
   auth: import.meta.env.VITE_NOTION_TOKEN,
-  notionVersion: '2022-06-28',
-  fetch: fetch // 明確指定使用全局 fetch
+  // 移除 notionVersion，使用默認值
+  // 移除 fetch 配置，使用默認的 fetch
 });
 
 // 更新 JournalEntry 介面
@@ -28,22 +28,16 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    // 首先驗證連接
-    const isValid = await validateDatabaseConnection();
-    if (!isValid) {
-      throw new Error('Database connection failed');
-    }
-
-    // 使用與 curl 測試完全相同的結構
+    // 簡化請求，移除不必要的驗證
     const newPage = await notion.pages.create({
       parent: {
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID
       },
       properties: {
+        // 確保與資料庫中的欄位名稱完全匹配
         Content: {
           title: [
             {
-              type: "text",
               text: {
                 content: entry.content
               }
@@ -51,49 +45,22 @@ export const syncToNotion = async (entry: JournalEntry) => {
           ]
         },
         Date: {
-          type: "date",
           date: {
-            start: entry.date,
-            time_zone: null
+            start: entry.date
           }
         }
       }
     });
 
-    console.log('Page created:', {
-      url: newPage.url,
-      id: newPage.id,
-      properties: newPage.properties
-    });
     return newPage;
   } catch (error: any) {
-    // 更詳細的錯誤處理
-    if (error.name === 'FetchError' || error.message === 'Failed to fetch') {
-      console.error('Network error:', {
-        error,
-        env: {
-          hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
-          hasDbId: !!import.meta.env.VITE_NOTION_DATABASE_ID,
-          isDev: import.meta.env.DEV,
-          isProd: import.meta.env.PROD
-        }
-      });
-      throw new Error('Network connection failed. Please check your internet connection.');
-    }
-
+    // 簡化錯誤處理
     console.error('Notion API error:', {
-      name: error.name,
       message: error.message,
       code: error.code,
-      status: error.status,
-      body: error.body,
-      request: {
-        databaseId: import.meta.env.VITE_NOTION_DATABASE_ID?.substring(0, 5) + '...',
-        content: entry.content.substring(0, 20) + '...',
-        date: entry.date
-      }
+      body: error.body
     });
-    throw error;
+    throw new Error(error.message || 'Failed to sync with Notion');
   }
 };
 

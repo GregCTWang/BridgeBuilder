@@ -141,12 +141,7 @@ const JournalPage = () => {
           date: new Date().toISOString(),
         }
 
-        // Save to Notion
-        const response = await syncToNotion(newEntry)
-        console.log('Entry saved:', {
-          url: response.url,
-          id: response.id
-        });
+        await syncToNotion(newEntry)
         
         // Update local state
         setEntries([{ date: new Date(), content: entry }, ...entries])
@@ -157,20 +152,10 @@ const JournalPage = () => {
           duration: 3000,
         })
       } catch (error: any) {
-        console.error('Save failed:', error);
-        
-        // 更具體的錯誤訊息
-        const errorMessage = error.message === 'Network connection failed. Please check your internet connection.'
-          ? '網路連接失敗，請檢查您的網路連接'
-          : error.code === 'unauthorized'
-          ? '授權失敗，請檢查 API Token'
-          : error.code === 'validation_error'
-          ? '資料驗證失敗'
-          : '無法同步到 Notion，請稍後再試';
-
+        console.error('Failed to save:', error);
         toast({
           title: "儲存失敗",
-          description: errorMessage,
+          description: "無法同步到 Notion，請稍後再試",
           variant: "destructive",
           duration: 5000,
         })
