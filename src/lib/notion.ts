@@ -15,7 +15,8 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
 
 // 使用 VITE_ 前綴，因為您的專案使用的是 Vite
 export const notion = new Client({
-  auth: import.meta.env.VITE_NOTION_TOKEN
+  auth: import.meta.env.VITE_NOTION_TOKEN,
+  notionVersion: '2022-06-28'
 });
 
 // 更新 JournalEntry 介面
@@ -26,28 +27,17 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    // 首先檢查資料庫結構
-    const database = await notion.databases.retrieve({
-      database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
-    });
-    
-    // 輸出資料庫結構以進行調試
-    console.log('Database structure:', {
-      properties: database.properties,
-      parent: database.parent,
-      title: database.title
-    });
-
-    // 根據資料庫結構建立頁面
-    const response = await notion.pages.create({
-      parent: { 
-        database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
+    // 簡化結構，參考官方範例
+    const newPage = await notion.pages.create({
+      parent: {
+        database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
       },
       properties: {
-        // 使用 Content 作為主要屬性
+        // 確保屬性名稱完全匹配資料庫中的欄位名稱
         Content: {
           title: [
             {
+              type: "text",  // 添加 type 屬性
               text: {
                 content: entry.content
               }
@@ -55,29 +45,28 @@ export const syncToNotion = async (entry: JournalEntry) => {
           ]
         },
         Date: {
+          type: "date",  // 添加 type 屬性
           date: {
-            start: entry.date
+            start: entry.date,
+            time_zone: null  // 明確設置時區
           }
         }
       }
     });
-    
-    console.log('Sync success:', response);
-    return response;
+
+    console.log('Page created:', newPage.url);  // 記錄新頁面的 URL
+    return newPage;
   } catch (error: any) {
-    // 添加更詳細的錯誤日誌
-    console.error('Full error object:', error);
-    console.error('Sync error details:', {
+    console.error('Failed to create page:', {
       error,
       message: error.message,
-      status: error.status,
       code: error.code,
-      body: error.body,
-      stack: error.stack,
       requestDetails: {
         databaseId: import.meta.env.VITE_NOTION_DATABASE_ID,
-        hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
-        entry
+        properties: {
+          content: entry.content,
+          date: entry.date
+        }
       }
     });
     throw error;
