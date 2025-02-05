@@ -136,19 +136,23 @@ const JournalPage = () => {
     e.preventDefault()
     if (entry.trim()) {
       try {
+        // 格式化日期為 YYYY-MM-DD
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+
         const newEntry: JournalEntry = {
           content: entry,
-          date: new Date().toISOString(),
+          date: formattedDate, // 使用格式化後的日期
         }
 
         await syncToNotion(newEntry)
         
         // Update local state
-        setEntries([{ date: new Date(), content: entry }, ...entries])
+        setEntries([{ date: today, content: entry }, ...entries])
         setEntry("")
         toast({
           title: "已儲存",
-          description: `儲存時間：${format(new Date(), "yyyy年MM月dd日 HH:mm")}`,
+          description: `儲存時間：${format(today, "yyyy年MM月dd日 HH:mm")}`,
           duration: 3000,
         })
       } catch (error: any) {

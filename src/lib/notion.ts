@@ -28,37 +28,62 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    // 簡化請求，移除不必要的驗證
+    // 確保日期格式正確
+    const formattedDate = new Date(entry.date).toISOString().split('T')[0];
+
+    // 使用與成功的 Test Entry 相同的結構
     const newPage = await notion.pages.create({
       parent: {
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID
       },
       properties: {
-        // 確保與資料庫中的欄位名稱完全匹配
         Content: {
           title: [
             {
+              type: "text",
               text: {
-                content: entry.content
-              }
+                content: entry.content,
+                link: null
+              },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default"
+              },
+              plain_text: entry.content,
+              href: null
             }
           ]
         },
         Date: {
+          type: "date",
           date: {
-            start: entry.date
+            start: formattedDate,
+            end: null,
+            time_zone: null
           }
         }
       }
     });
 
+    console.log('Created page:', {
+      url: newPage.url,
+      content: entry.content,
+      date: formattedDate
+    });
     return newPage;
   } catch (error: any) {
-    // 簡化錯誤處理
     console.error('Notion API error:', {
       message: error.message,
       code: error.code,
-      body: error.body
+      body: error.body,
+      requestData: {
+        content: entry.content,
+        date: formattedDate
+      }
     });
     throw new Error(error.message || 'Failed to sync with Notion');
   }
