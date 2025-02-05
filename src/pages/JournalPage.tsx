@@ -5,7 +5,7 @@ import { cn } from "../lib/utils"
 import { format } from "date-fns"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { syncToNotion, JournalEntry, validateDatabaseConnection } from "../lib/notion"
+import { syncToNotion, JournalEntry, validateDatabaseConnection, notion } from "../lib/notion"
 
 const JournalPage = () => {
   const [entry, setEntry] = useState("")
