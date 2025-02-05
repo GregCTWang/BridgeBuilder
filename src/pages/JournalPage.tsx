@@ -94,14 +94,36 @@ const JournalPage = () => {
     checkDatabase();
   }, []);
 
+  useEffect(() => {
+    // 在組件加載時檢查環境變數
+    const checkEnvironment = () => {
+      const token = import.meta.env.VITE_NOTION_TOKEN;
+      const dbId = import.meta.env.VITE_NOTION_DATABASE_ID;
+      
+      console.log('Environment check:', {
+        hasToken: !!token,
+        tokenLength: token?.length,
+        hasDbId: !!dbId,
+        dbIdLength: dbId?.length
+      });
+    };
+
+    checkEnvironment();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
       try {
+        // 添加日誌來追踪提交過程
+        console.log('Submitting entry:', entry);
+        
         const newEntry: JournalEntry = {
           content: entry,
           date: new Date().toISOString(),
         }
+
+        console.log('Created newEntry object:', newEntry);
 
         // Save to Notion
         const response = await syncToNotion(newEntry)
@@ -116,12 +138,22 @@ const JournalPage = () => {
           duration: 3000,
         })
       } catch (error: any) {
-        console.error('Error saving to Notion:', error);
+        // 更詳細的錯誤處理
+        console.error('Error details:', {
+          error,
+          message: error.message,
+          body: error.body,
+          code: error.code
+        });
+
         toast({
           title: "儲存失敗",
-          description: error.message === 'Failed to connect to Notion API' 
-            ? '無法連接到 Notion API，請檢查網路連線'
-            : `無法同步到 Notion：${error?.body?.message || error?.message || '請檢查連線設定'}`,
+          description: `無法同步到 Notion：${
+            error.code === 'unauthorized' ? '授權失敗，請檢查 API Token' :
+            error.code === 'validation_error' ? '資料驗證失敗' :
+            error.message === 'Failed to connect to Notion API' ? '無法連接到 Notion API' :
+            error?.body?.message || error?.message || '請檢查連線設定'
+          }`,
           variant: "destructive",
           duration: 5000,
         })

@@ -25,19 +25,17 @@ export interface JournalEntry {
 
 export const syncToNotion = async (entry: JournalEntry) => {
   try {
-    // 首先檢查資料庫結構
-    const database = await notion.databases.retrieve({
-      database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string
-    });
-    console.log('Database properties:', database.properties);
+    // 添加更多日誌來幫助調試
+    console.log('Attempting to sync to Notion with entry:', entry);
+    console.log('Using database ID:', import.meta.env.VITE_NOTION_DATABASE_ID);
+    console.log('Token available:', !!import.meta.env.VITE_NOTION_TOKEN);
 
     const response = await notion.pages.create({
       parent: { 
         database_id: import.meta.env.VITE_NOTION_DATABASE_ID as string 
       },
       properties: {
-        // 使用資料庫中實際的欄位名稱
-        Content: {  // 或其他實際的名稱
+        Content: {
           title: [
             {
               text: {
@@ -57,12 +55,14 @@ export const syncToNotion = async (entry: JournalEntry) => {
     console.log('Successfully synced to Notion, response:', response);
     return response;
   } catch (error: any) {
-    // 改進錯誤處理，捕獲網路錯誤
-    if (error.code === 'ECONNREFUSED' || error.name === 'FetchError') {
-      console.error('Network error:', error);
-      throw new Error('Failed to connect to Notion API');
-    }
-    console.error('Failed to sync with Notion:', error?.body || error);
+    // 更詳細的錯誤日誌
+    console.error('Sync to Notion failed with error:', {
+      error,
+      message: error.message,
+      body: error.body,
+      code: error.code,
+      stack: error.stack
+    });
     throw error;
   }
 };
