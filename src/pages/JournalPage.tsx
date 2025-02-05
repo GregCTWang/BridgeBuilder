@@ -59,23 +59,33 @@ const JournalPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (entry.trim()) {
-      const newEntry: JournalEntry = {
-        title: format(new Date(), "yyyy-MM-dd"),
-        content: entry,
-        date: new Date().toISOString(),
-      }
+      try {
+        const newEntry: JournalEntry = {
+          title: format(new Date(), "yyyy-MM-dd"),
+          content: entry,
+          date: new Date().toISOString(),
+        }
 
-      // Save to Notion
-      await syncToNotion(newEntry)
-      
-      // Update local state
-      setEntries([{ date: new Date(), content: entry }, ...entries])
-      setEntry("")
-      toast({
-        title: "已儲存",
-        description: `儲存時間：${format(new Date(), "yyyy年MM月dd日 HH:mm")}`,
-        duration: 3000,
-      })
+        // Save to Notion
+        await syncToNotion(newEntry)
+        
+        // Update local state
+        setEntries([{ date: new Date(), content: entry }, ...entries])
+        setEntry("")
+        toast({
+          title: "已儲存",
+          description: `儲存時間：${format(new Date(), "yyyy年MM月dd日 HH:mm")}`,
+          duration: 3000,
+        })
+      } catch (error) {
+        console.error('Error saving to Notion:', error);
+        toast({
+          title: "儲存失敗",
+          description: "無法同步到 Notion，請檢查連線設定",
+          variant: "destructive",
+          duration: 5000,
+        })
+      }
     }
   }
 
