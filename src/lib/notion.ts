@@ -24,11 +24,21 @@ export interface JournalEntry {
 }
 
 export const syncToNotion = async (entry: JournalEntry) => {
+  // 在同步之前檢查環境變數
+  if (!import.meta.env.VITE_NOTION_TOKEN) {
+    throw new Error('Notion Token is not set in environment variables');
+  }
+  if (!import.meta.env.VITE_NOTION_DATABASE_ID) {
+    throw new Error('Notion Database ID is not set in environment variables');
+  }
+
   try {
-    // 添加更多日誌來幫助調試
-    console.log('Attempting to sync to Notion with entry:', entry);
-    console.log('Using database ID:', import.meta.env.VITE_NOTION_DATABASE_ID);
-    console.log('Token available:', !!import.meta.env.VITE_NOTION_TOKEN);
+    console.log('Sync attempt details:', {
+      tokenAvailable: !!import.meta.env.VITE_NOTION_TOKEN,
+      tokenPrefix: import.meta.env.VITE_NOTION_TOKEN?.substring(0, 5),
+      databaseId: import.meta.env.VITE_NOTION_DATABASE_ID,
+      entry
+    });
 
     const response = await notion.pages.create({
       parent: { 
@@ -52,16 +62,20 @@ export const syncToNotion = async (entry: JournalEntry) => {
       }
     });
     
-    console.log('Successfully synced to Notion, response:', response);
+    console.log('Sync success:', response);
     return response;
   } catch (error: any) {
-    // 更詳細的錯誤日誌
-    console.error('Sync to Notion failed with error:', {
+    console.error('Sync error details:', {
       error,
       message: error.message,
-      body: error.body,
+      status: error.status,
       code: error.code,
-      stack: error.stack
+      body: error.body,
+      stack: error.stack,
+      envVars: {
+        hasToken: !!import.meta.env.VITE_NOTION_TOKEN,
+        hasDbId: !!import.meta.env.VITE_NOTION_DATABASE_ID
+      }
     });
     throw error;
   }

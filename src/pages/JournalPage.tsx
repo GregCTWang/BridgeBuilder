@@ -100,11 +100,12 @@ const JournalPage = () => {
       const token = import.meta.env.VITE_NOTION_TOKEN;
       const dbId = import.meta.env.VITE_NOTION_DATABASE_ID;
       
-      console.log('Environment check:', {
-        hasToken: !!token,
-        tokenLength: token?.length,
-        hasDbId: !!dbId,
-        dbIdLength: dbId?.length
+      console.log('Full environment check:', {
+        token: token ? `${token.substring(0, 5)}...${token.substring(token.length - 5)}` : 'not set',
+        dbId: dbId || 'not set',
+        isDevelopment: import.meta.env.DEV,
+        isProduction: import.meta.env.PROD,
+        mode: import.meta.env.MODE
       });
     };
 
